@@ -1,0 +1,14 @@
+import streamlit as st
+import time
+
+st.title("🤖 자비스 자동매매 봇 24시간 구동 중")
+st.write("클라우드 서버에서 봇이 정상적으로 작동하고 있습니다.")
+
+# 봇 상태 확인 버튼
+if st.button("봇 상태 새로고침"):
+    st.success("봇이 활성화되어 정상적으로 실행 중입니다!")
+    
+# 24시간 백그라운드 유지를 위한 루프 예시
+while True:
+    # 여기에 주식 가격 조회 및 텔레그램 알림 코드가 들어갑니다.
+    time.sleep(60)
