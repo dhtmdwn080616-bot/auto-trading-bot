@@ -15,6 +15,7 @@
 """
 
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -33,6 +34,10 @@ BACKUP_DIR = AUTO_DIR / "protected_backup"
 STOP_FILE = AUTO_DIR / "STOP"
 LOCK_FILE = AUTO_DIR / "cycle.lock"
 TELEGRAM_FILE = OUT_DIR / "telegram.txt"
+JOBS_DIR = AUTO_DIR / "jobs"            # 오래 걸리는 시험을 주비스 대신 스케줄러가 돌리는 곳
+JOBS_PENDING = JOBS_DIR / "pending"     # 주비스가 요청 파일(.json)을 여기에 둔다
+JOBS_RUNNING = JOBS_DIR / "running"
+JOBS_DONE = JOBS_DIR / "done"
 
 # 실전 봇 폴더 (PC 돌파봇). 다르면 환경변수 JUBIS_BOT_DIR 로 바꾼다.
 BOT_DIR = Path(os.environ.get("JUBIS_BOT_DIR", r"C:\Users\PC_1M"))
@@ -116,6 +121,139 @@ def verify_protected(snap):
     return problems
 
 
+# ---------------------------------------------------------------
+# 백그라운드 작업(job): 주비스가 끝나면 주비스가 띄운 프로그램도 같이 죽는다.
+# 그래서 오래 걸리는 시험은 주비스가 요청 파일만 남기고, 스케줄러가 대신 따로 돌린다.
+# 요청 파일 예 (autopilot/jobs/pending/후보14.json):
+#   {"script": "C:\\Users\\PC_1M\\jubis_exp_후보14.py", "args": [], "cwd": "C:\\Users\\PC_1M"}
+# ---------------------------------------------------------------
+
+def pid_alive(pid):
+    try:
+        if os.name == "nt":
+            r = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"],
+                               capture_output=True, text=True, errors="replace")
+            return str(pid) in r.stdout
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        return False
+
+
+def _inside(path, base):
+    try:
+        path.resolve().relative_to(Path(base).resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def validate_job(job):
+    """주비스가 요청할 수 있는 건 'jubis_로 시작하는 .py 파일 하나'뿐이다."""
+    script = Path(job.get("script", ""))
+    args = [str(a) for a in job.get("args", [])]
+    cwd = Path(job.get("cwd") or BOT_DIR)
+    if script.suffix.lower() != ".py" or not script.name.startswith("jubis_"):
+        return "script 이름이 jubis_ 로 시작하는 .py 가 아님"
+    if not script.exists():
+        return "script 파일이 없음"
+    if not (_inside(script, JUBIS_DIR) or _inside(script, BOT_DIR)):
+        return "script 가 jubis 폴더나 실전 봇 폴더 밖에 있음"
+    if not cwd.is_dir() or not (_inside(cwd, JUBIS_DIR) or _inside(cwd, BOT_DIR)):
+        return "cwd 가 허용된 폴더가 아님"
+    text = script.read_text(encoding="utf-8", errors="replace")
+    # replay 스크립트는 'import my_keys'로 값을 바꿔 쓰므로 허용. 파일을 직접 열거나 엔진을 건드리는 건 거절.
+    if "my_keys.py" in text or any("my_keys.py" in a or "rule_engine" in a for a in args):
+        return "my_keys.py 파일이나 엔진 파일을 직접 다루는 코드는 허용되지 않음"
+    return None
+
+
+def refresh_jobs():
+    """돌고 있던 job 이 끝났으면 done 으로 옮긴다."""
+    for d in (JOBS_PENDING, JOBS_RUNNING, JOBS_DONE):
+        d.mkdir(parents=True, exist_ok=True)
+    for st in JOBS_RUNNING.glob("*.status.json"):
+        try:
+            info = json.loads(st.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if not pid_alive(info.get("pid", 0)):
+            info["ended"] = f"{now_kst():%Y-%m-%d %H:%M:%S}"
+            (JOBS_DONE / st.name).write_text(json.dumps(info, ensure_ascii=False, indent=1), encoding="utf-8")
+            st.unlink()
+            log(f"job 끝남: {info.get('name')}")
+
+
+def launch_pending_jobs(mode):
+    refresh_jobs()
+    if mode == "MARKET":
+        return
+    if any(JOBS_RUNNING.glob("*.status.json")):
+        return                      # 한 번에 하나만 (한투 토큰 충돌 방지)
+    for req in sorted(JOBS_PENDING.glob("*.json")):
+        name = req.stem
+        try:
+            job = json.loads(req.read_text(encoding="utf-8"))
+        except Exception as e:
+            log(f"job 요청 읽기 실패 {name}: {e}")
+            req.rename(JOBS_DONE / f"{name}.rejected.json")
+            continue
+        why = validate_job(job)
+        if why:
+            log(f"job 거절 {name}: {why}")
+            job["rejected"] = why
+            (JOBS_DONE / f"{name}.rejected.json").write_text(
+                json.dumps(job, ensure_ascii=False, indent=1), encoding="utf-8")
+            req.unlink()
+            continue
+        out_path = JOBS_DIR / f"{name}.out.txt"
+        out = open(out_path, "w", encoding="utf-8", errors="replace")
+        cmd = [sys.executable, str(job["script"])] + [str(a) for a in job.get("args", [])]
+        flags = 0
+        if os.name == "nt":
+            flags = 0x00000008 | 0x00000200 | 0x01000000   # DETACHED | NEW_PROCESS_GROUP | BREAKAWAY_FROM_JOB
+        env = dict(os.environ, PYTHONUTF8="1")
+        try:
+            proc = subprocess.Popen(cmd, cwd=job.get("cwd") or BOT_DIR, stdout=out, stderr=subprocess.STDOUT,
+                                    stdin=subprocess.DEVNULL, creationflags=flags, env=env)
+        except OSError:
+            proc = subprocess.Popen(cmd, cwd=job.get("cwd") or BOT_DIR, stdout=out, stderr=subprocess.STDOUT,
+                                    stdin=subprocess.DEVNULL,
+                                    creationflags=(flags & ~0x01000000) if os.name == "nt" else 0, env=env)
+        info = {"name": name, "pid": proc.pid, "started": f"{now_kst():%Y-%m-%d %H:%M:%S}",
+                "script": str(job["script"]), "output": str(out_path)}
+        (JOBS_RUNNING / f"{name}.status.json").write_text(json.dumps(info, ensure_ascii=False, indent=1),
+                                                          encoding="utf-8")
+        req.rename(JOBS_RUNNING / req.name)
+        log(f"job 시작: {name} (pid {proc.pid})")
+        break
+
+
+def jobs_summary():
+    lines = []
+    for label, d in (("돌고 있음", JOBS_RUNNING), ("끝남(최근)", JOBS_DONE)):
+        files = sorted(d.glob("*.status.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:5]
+        for f in files:
+            try:
+                i = json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            tail = ""
+            try:
+                txt = Path(i["output"]).read_text(encoding="utf-8", errors="replace").splitlines()
+                tail = " / 출력 마지막: " + " | ".join(txt[-3:])[:300] if txt else " / 출력 없음"
+            except Exception:
+                pass
+            lines.append(f"- [{label}] {i['name']} 시작 {i['started']}" + (f" 끝 {i['ended']}" if "ended" in i else "")
+                         + f" (출력 파일: {i['output']})" + tail)
+    for f in JOBS_DONE.glob("*.rejected.json"):
+        try:
+            lines.append(f"- [거절됨] {f.stem}: {json.loads(f.read_text(encoding='utf-8')).get('rejected')}")
+        except Exception:
+            pass
+    return "\n".join(lines) if lines else "- (없음)"
+
+
 def find_claude():
     for name in ("claude", "claude.cmd", "claude.exe"):
         path = shutil.which(name)
@@ -131,6 +269,7 @@ def build_prompt(mode):
         f"지금 시각(한국): {t:%Y-%m-%d %H:%M} ({'월화수목금토일'[t.weekday()]}요일)\n"
         f"모드: {mode}  (MARKET = 장중, 리플레이·주문·한투 API 호출 금지 / OFF = 리플레이 가능)\n"
         f"실전 봇 폴더: {BOT_DIR}\n\n"
+        f"[백그라운드 작업 현황]\n{jobs_summary()}\n\n"
     )
     return header + base
 
@@ -190,6 +329,7 @@ def main():
         return
     LOCK_FILE.write_text(str(os.getpid()), encoding="utf-8")
     try:
+        refresh_jobs()
         snap = snapshot_protected()
         log(f"보호 파일 {len(snap)}개 지문 저장")
         run_claude(market_mode())
@@ -206,6 +346,7 @@ def main():
             send_telegram(TELEGRAM_FILE.read_text(encoding="utf-8"))
             TELEGRAM_FILE.unlink()
         git_commit()
+        launch_pending_jobs(market_mode())
     finally:
         LOCK_FILE.unlink(missing_ok=True)
 
