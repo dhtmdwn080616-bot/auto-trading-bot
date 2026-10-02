@@ -5,3 +5,4 @@ autopilot/cycle.lock
 autopilot/STOP
 __pycache__/
 autopilot/jobs/
+dashboard.html

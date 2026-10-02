@@ -347,6 +347,11 @@ def main():
             TELEGRAM_FILE.unlink()
         git_commit()
         launch_pending_jobs(market_mode())
+        try:
+            import make_dashboard
+            make_dashboard.main()
+        except Exception as e:
+            log(f"대시보드 갱신 실패: {e}")
     finally:
         LOCK_FILE.unlink(missing_ok=True)
 
