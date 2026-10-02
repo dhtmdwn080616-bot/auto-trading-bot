@@ -162,6 +162,9 @@ def validate_job(job):
     if not cwd.is_dir() or not (_inside(cwd, JUBIS_DIR) or _inside(cwd, BOT_DIR)):
         return "cwd 가 허용된 폴더가 아님"
     text = script.read_text(encoding="utf-8", errors="replace")
+    # KRX 접속 금지 스위치: autopilot/KRX_HOLD 파일이 있는 동안은 KRX를 쓰는 시험(pykrx·리플레이)을 돌리지 않는다.
+    if (AUTO_DIR / "KRX_HOLD").exists() and any(k in text for k in ("pykrx", "replay_v16", "replay_flow", "krx.co.kr")):
+        return "KRX_HOLD 중: KRX 접속이 필요한 시험은 보류 (파일을 지우면 풀림)"
     # replay 스크립트는 'import my_keys'로 값을 바꿔 쓰므로 허용. 파일을 직접 열거나 엔진을 건드리는 건 거절.
     if "my_keys.py" in text or any("my_keys.py" in a or "rule_engine" in a for a in args):
         return "my_keys.py 파일이나 엔진 파일을 직접 다루는 코드는 허용되지 않음"
