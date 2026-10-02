@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "WebSearch",
+      "WebFetch",
+      "Bash(python *)",
+      "Bash(py *)",
+      "Bash(timeout *)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(ls *)",
+      "Bash(dir *)"
+    ],
+    "deny": [
+      "Read(**/my_keys.py)",
+      "Edit(**/my_keys.py)",
+      "Write(**/my_keys.py)",
+      "Edit(**/rule_engine_*.py)",
+      "Write(**/rule_engine_*.py)",
+      "Edit(**/run_bot.bat)",
+      "Write(**/run_bot.bat)",
+      "Edit(handover/**)",
+      "Write(handover/**)",
+      "Bash(*my_keys*)",
+      "Bash(pip *)",
+      "Bash(del *)",
+      "Bash(rm *)",
+      "Bash(git push*)"
+    ]
+  }
+}

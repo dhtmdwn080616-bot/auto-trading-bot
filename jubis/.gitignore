@@ -1,0 +1,6 @@
+autopilot/logs/
+autopilot/out/
+autopilot/protected_backup/
+autopilot/cycle.lock
+autopilot/STOP
+__pycache__/

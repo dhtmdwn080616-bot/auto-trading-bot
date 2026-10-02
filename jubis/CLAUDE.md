@@ -15,6 +15,12 @@
 - `handover/` : 인수인계서 원본 (함부로 고치지 않는다)
 - `reports/` : 승주에게 보내는 보고서
 
+## 자동 실행 (autopilot)
+- 스케줄러가 2시간마다 `autopilot/jubis_cycle.py`로 나를 깨운다. 그때는 `autopilot/CYCLE_PROMPT.md`를 따른다.
+- 사이클 사이의 기억은 `memory/now.md`(다음에 할 일)에 남긴다.
+- 실험은 `python autopilot/seal.py <후보파일>`로 봉인한 뒤에만 돌린다.
+- 승주용 설치 안내: `시작하기.md`
+
 ## 지켜야 할 규칙
 - 실전 봇의 규칙, 운용자본, 엔진 파일(rule_engine_*.py)은 승주 승인 없이 바꾸지 않는다.
 - 비밀번호, API 키, 계좌번호, KRX 아이디는 어떤 파일에도 쓰지 않는다. 이 폴더에 `my_keys.py`를 복사하지 않는다.
