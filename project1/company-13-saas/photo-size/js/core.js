@@ -9,19 +9,19 @@
   var PRESETS = [
     {
       id: 'passport',
-      label: '여권 사진 (3.5×4.5cm, 413×531px, 500KB 이하)',
+      label: '여권 사진 참고값 (3.5×4.5cm, 413×531px, 500KB 이하)',
       width: 413, height: 531, maxKB: 500, keepAspect: false,
       desc: '3.5×4.5cm를 300dpi로 환산한 413×531px, JPG 500KB 이하로 알려진 값입니다(2차 출처). 온라인 여권 신청은 허용 범위가 따로 안내될 수 있으니 외교부·접수처 안내를 확인하세요.'
     },
     {
       id: 'id3x4',
-      label: '증명·이력서 사진 (3×4cm, 354×472px)',
+      label: '증명·이력서 사진 참고값 (3×4cm, 354×472px)',
       width: 354, height: 472, maxKB: 500, keepAspect: false,
       desc: '3×4cm를 300dpi로 환산한 354×472px입니다. 용량 500KB는 임의 기본값이므로 제출처가 요구하는 용량으로 바꾸세요.'
     },
     {
       id: 'id35x45',
-      label: '증명사진 (3.5×4.5cm, 413×531px)',
+      label: '증명사진 참고값 (3.5×4.5cm, 413×531px)',
       width: 413, height: 531, maxKB: 500, keepAspect: false,
       desc: '3.5×4.5cm를 300dpi로 환산한 413×531px입니다. 용량 500KB는 임의 기본값입니다.'
     },
@@ -159,8 +159,43 @@
     }
   }
 
+  // 목표 용량 계산(1KB=1000바이트)과 같은 기준으로 표시해야 '500KB 이하'와 어긋나 보이지 않는다.
   function formatKB(bytes) {
-    return (bytes / 1024).toFixed(1) + 'KB';
+    return (bytes / 1000).toFixed(1) + 'KB';
+  }
+
+  // JPEG 앞부분(바이트)에서 EXIF 방향값(1~8)을 읽는다. 없거나 JPEG가 아니면 0.
+  function parseExifOrientation(b) {
+    if (!b || b.length < 12 || b[0] !== 0xff || b[1] !== 0xd8) return 0;
+    var i = 2;
+    while (i + 4 <= b.length) {
+      if (b[i] !== 0xff) return 0;
+      var m = b[i + 1];
+      if (m === 0xd8 || m === 0x01 || (m >= 0xd0 && m <= 0xd7)) { i += 2; continue; }
+      if (m === 0xda || m === 0xd9) return 0;
+      var len = (b[i + 2] << 8) | b[i + 3];
+      if (m === 0xe1 && i + 4 + 14 <= b.length &&
+          b[i + 4] === 0x45 && b[i + 5] === 0x78 && b[i + 6] === 0x69 && b[i + 7] === 0x66 && b[i + 8] === 0 && b[i + 9] === 0) {
+        var t = i + 10;
+        var le = b[t] === 0x49 && b[t + 1] === 0x49;
+        if (!le && !(b[t] === 0x4d && b[t + 1] === 0x4d)) return 0;
+        var u16 = function (o) { return le ? (b[o] | (b[o + 1] << 8)) : ((b[o] << 8) | b[o + 1]); };
+        var u32 = function (o) { return le ? (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0
+                                           : ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0; };
+        if (t + 8 > b.length) return 0;
+        var ifd = t + u32(t + 4);
+        if (ifd + 2 > b.length) return 0;
+        var n = u16(ifd);
+        for (var k = 0; k < n; k++) {
+          var e = ifd + 2 + k * 12;
+          if (e + 12 > b.length) return 0;
+          if (u16(e) === 0x0112) { var v = u16(e + 8); return v >= 1 && v <= 8 ? v : 0; }
+        }
+        return 0;
+      }
+      i += 2 + len;
+    }
+    return 0;
   }
   function formatBytes(bytes) {
     return String(bytes).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '바이트';
@@ -171,7 +206,7 @@
     validateSpec: validateSpec, kbToMaxBytes: kbToMaxBytes,
     fitCrop: fitCrop, clampCrop: clampCrop, zoomCropTo: zoomCropTo, cropZoom: cropZoom,
     downscaleSteps: downscaleSteps, findQuality: findQuality,
-    formatKB: formatKB, formatBytes: formatBytes
+    formatKB: formatKB, parseExifOrientation: parseExifOrientation, formatBytes: formatBytes
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.PhotoCore = api;
