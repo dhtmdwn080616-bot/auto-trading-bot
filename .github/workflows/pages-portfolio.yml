@@ -1,0 +1,45 @@
+# Project1 company-1-web 포트폴리오를 GitHub Pages로 배포한다.
+# 배포 대상: project1/company-1-web/portfolio/ (정적 파일만, 빌드 없음)
+# 사전 조건: Settings > Pages > Source = "GitHub Actions" (PAGES-SETUP.md 참고)
+name: Deploy portfolio to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "project1/company-1-web/portfolio/**"
+      - ".github/workflows/pages-portfolio.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check required files
+        run: |
+          for f in index.html cafe.html academy.html clinic.html; do
+            test -f "project1/company-1-web/portfolio/$f" || { echo "missing $f"; exit 1; }
+          done
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: project1/company-1-web/portfolio
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
