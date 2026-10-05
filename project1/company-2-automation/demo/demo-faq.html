@@ -1,0 +1,199 @@
+<!doctype html>
+<!-- 가상 업체 시연용 샘플: '모아 헤어'는 실존하지 않는 가상 미용실입니다. 실제 AI 호출 없음(정적 데이터). -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>모아 헤어 FAQ 데모</title>
+<style>
+:root{
+  --bg:#f4f5f7; --panel:#ffffff; --text:#1d2129; --muted:#5f6673; --line:#e2e5ea;
+  --accent:#3b5bdb; --accent-text:#ffffff; --bot:#ffffff; --user:#fee500; --user-text:#1d2129;
+  --banner-bg:#fff4e5; --banner-text:#7a4b00; --warn-bg:#fdecec; --warn-text:#9b1c1c; --chip:#eef1f6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111317; --panel:#1b1e24; --text:#e8eaee; --muted:#9aa1ad; --line:#2c3038;
+    --accent:#7b93ff; --accent-text:#0d1020; --bot:#242830; --user:#d8c400; --user-text:#14140a;
+    --banner-bg:#3a2a0d; --banner-text:#ffd98a; --warn-bg:#3a1717; --warn-text:#ffb4b4; --chip:#262a33;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111317; --panel:#1b1e24; --text:#e8eaee; --muted:#9aa1ad; --line:#2c3038;
+  --accent:#7b93ff; --accent-text:#0d1020; --bot:#242830; --user:#d8c400; --user-text:#14140a;
+  --banner-bg:#3a2a0d; --banner-text:#ffd98a; --warn-bg:#3a1717; --warn-text:#ffb4b4; --chip:#262a33;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif}
+.banner{background:var(--banner-bg);color:var(--banner-text);padding:10px 16px;font-size:13px;text-align:center;border-bottom:1px solid var(--line)}
+.wrap{max-width:1040px;margin:0 auto;padding:16px;display:grid;grid-template-columns:340px 1fr;gap:16px}
+@media (max-width:760px){.wrap{grid-template-columns:1fr}.chat{order:-1}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+h1{font-size:17px;margin:0}
+.sub{color:var(--muted);font-size:12px}
+button{font:inherit;color:inherit}
+.theme{background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:13px}
+.side{padding:12px 16px 16px}
+input[type=search]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}
+.cats{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.cat{background:var(--chip);border:1px solid transparent;border-radius:999px;padding:4px 12px;cursor:pointer;font-size:13px}
+.cat[aria-pressed="true"]{background:var(--accent);color:var(--accent-text)}
+.qlist{list-style:none;margin:0;padding:0;max-height:62vh;overflow:auto}
+@media (max-width:760px){.qlist{max-height:none}}
+.qlist button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:10px 4px;cursor:pointer}
+.qlist button:hover,.qlist button:focus-visible{background:var(--chip)}
+.tag{display:inline-block;font-size:11px;color:var(--muted);margin-right:6px}
+.tag.h{color:var(--warn-text)}
+.empty{color:var(--muted);padding:12px 4px;font-size:13px}
+.chat{display:flex;flex-direction:column;min-height:420px}
+.log{flex:1;padding:16px;display:flex;flex-direction:column;gap:10px;overflow:auto;max-height:70vh}
+@media (max-width:760px){.log{max-height:55vh}}
+.msg{max-width:85%;padding:10px 14px;border-radius:14px;white-space:pre-line;word-break:keep-all;overflow-wrap:anywhere}
+.bot{background:var(--bot);border:1px solid var(--line);align-self:flex-start;border-top-left-radius:4px}
+.user{background:var(--user);color:var(--user-text);align-self:flex-end;border-top-right-radius:4px}
+.handoff{background:var(--warn-bg);color:var(--warn-text);border-color:transparent}
+.who{font-size:11px;color:var(--muted);margin-bottom:2px}
+.notice{font-size:12px;color:var(--muted);padding:8px 16px;border-top:1px solid var(--line)}
+.reset{background:none;border:0;color:var(--accent);cursor:pointer;font-size:12px;padding:0}
+</style>
+</head>
+<body>
+<div class="banner" role="note"><strong>가상 업체 시연용 샘플</strong> · '모아 헤어'는 실존하지 않는 가상 미용실입니다. 시간·가격·규정은 모두 예시이며, 실제 AI 호출 없이 정적 데이터로 동작합니다.</div>
+
+<div class="wrap">
+  <section class="panel" aria-label="질문 목록">
+    <header class="top">
+      <div><h1>모아 헤어 상담</h1><div class="sub">자주 묻는 질문 선택</div></div>
+      <button class="theme" id="theme" type="button" aria-label="화면 테마 전환">테마</button>
+    </header>
+    <div class="side">
+      <input type="search" id="q" placeholder="질문 검색 (예: 주차, 취소)" aria-label="질문 검색">
+      <div class="cats" id="cats" role="group" aria-label="카테고리"></div>
+      <ul class="qlist" id="list"></ul>
+    </div>
+  </section>
+
+  <section class="panel chat" aria-label="채팅">
+    <header class="top">
+      <div><h1>채팅</h1><div class="sub">AI 자동 응답 중 · 직원 연결은 "상담원"</div></div>
+      <button class="reset" id="reset" type="button">대화 지우기</button>
+    </header>
+    <div class="log" id="log" aria-live="polite"></div>
+    <div class="notice">이 데모는 답변 흐름 시연용입니다. 빨간 말풍선은 자동응답하지 않고 직원에게 넘기는 유형입니다.</div>
+  </section>
+</div>
+
+<script>
+/* 가상 업체 시연용 샘플 데이터. 출처: demo/faq-set.md. {중괄호}는 납품 시 고객이 채울 값. */
+var GREETING = "안녕하세요, 모아 헤어입니다. 이 채팅의 첫 답변은 AI 자동 응답으로 안내되며, 내용이 틀릴 수 있어요. 예약 확정·가격 확정·환불·건강 관련 문의는 직원이 직접 확인해 답변드립니다. 직원 상담을 원하시면 언제든 \"상담원\"이라고 입력해 주세요.";
+var HANDOFF_MED = "불편을 겪고 계셔서 걱정됩니다. 피부·두피 증상은 자동 상담으로 안내드리기 어려워 직원에게 바로 전달할게요. 증상이 심하거나 붓기·호흡 곤란이 있으면 먼저 병원(응급 시 119) 진료를 받아 주세요.";
+var HANDOFF = "정확한 확인이 필요한 내용이라 담당 직원에게 전달했어요. 영업시간({평일 10:00~20:00}) 안에 순서대로 직접 연락드리겠습니다. 급하시면 매장 번호 {0X-XXXX-XXXX}로 전화 주세요.";
+var HANDOFF_UNKNOWN = "이 질문은 제가 정확히 답변드리기 어려워요. 직원이 확인 후 답변드릴게요.";
+
+var FAQ = [
+ {c:"영업·위치",q:"영업시간이 어떻게 되나요?",a:"모아 헤어 영업시간은 {평일 10:00~20:00}, {주말 10:00~19:00}입니다. 마지막 시술 접수는 마감 {1시간} 전까지예요. 시술 종류에 따라 접수 마감이 달라질 수 있어요."},
+ {c:"영업·위치",q:"휴무일이 언제인가요?",a:"정기 휴무는 {매주 화요일}입니다. 명절·임시 휴무는 카카오톡 채널 공지와 네이버 플레이스 공지에 미리 올려 드려요."},
+ {c:"영업·위치",q:"위치가 어디인가요?",a:"주소는 {OO시 OO구 OO로 00, 0층}입니다. {OO역 0번 출구에서 도보 약 0분} 거리예요."},
+ {c:"영업·위치",q:"주차할 수 있나요?",a:"건물 {지하 주차장}을 이용하실 수 있고, 시술 고객은 {0시간} 무료 주차가 지원돼요. 결제 시 차량 번호를 말씀해 주세요. 주차 공간이 협소할 수 있어 대중교통 이용을 권해 드려요."},
+ {c:"예약",q:"예약은 어떻게 하나요?",a:"네이버 예약({예약 링크}) 또는 이 채팅방에서 \"예약\"이라고 입력해 주시면 안내해 드려요. 원하시는 날짜·시간·시술·디자이너를 알려 주시면 확인 후 확정 메시지를 드립니다."},
+ {c:"예약",q:"당일 예약도 되나요?",a:"빈 시간이 있으면 당일 예약도 가능해요. 당일은 네이버 예약에서 실시간 빈자리를 확인하시는 게 가장 빠릅니다."},
+ {c:"예약",q:"디자이너를 지정할 수 있나요?",a:"네, 예약 시 원하시는 디자이너를 선택하실 수 있어요. 디자이너별 휴무일이 달라 원하는 날짜에 예약이 안 될 수 있으니 예약 화면에서 확인해 주세요."},
+ {c:"예약",q:"예약 없이 방문해도 되나요?",a:"가능은 하지만 예약 고객이 우선이라 대기 시간이 길어질 수 있어요. 방문 전 채팅으로 빈자리를 문의해 주시면 안내해 드릴게요."},
+ {c:"예약",q:"예약 변경은 어떻게 하나요?",a:"네이버 예약 내역에서 직접 변경하시거나, 이 채팅방에 예약자 성함과 기존 예약 일시를 남겨 주세요. 변경 가능 여부를 확인해 답변드려요."},
+ {c:"취소·노쇼",q:"예약 취소 규정이 어떻게 되나요?",a:"예약 시간 {24시간} 전까지는 언제든 취소하실 수 있어요. 그 이후 취소나 연락 없는 불참이 반복되면 이후 예약이 제한될 수 있어요.\n※ 예약금·위약금 환불 문의는 직원이 직접 안내합니다."},
+ {c:"취소·노쇼",q:"늦을 것 같아요. 어떻게 하나요?",a:"미리 이 채팅방에 알려 주세요. {15분} 이상 늦으시면 다음 예약 일정 때문에 시술 내용이 조정되거나 예약이 변경될 수 있어요."},
+ {c:"가격·결제",q:"가격표를 볼 수 있나요?",a:"기본 가격 안내예요 (형식 예시, 실제 금액 아님)\n· 커트(여성) {OO,000원}~\n· 커트(남성) {OO,000원}~\n· 일반 펌 {OO,000원}~\n· 염색(뿌리) {OO,000원}~\n· 염색(전체) {OO,000원}~\n· 클리닉 {OO,000원}~\n모발 길이·상태·약제에 따라 달라질 수 있어 정확한 금액은 상담 후 안내드려요."},
+ {c:"가격·결제",q:"기장 추가 요금이 있나요?",a:"펌·염색은 모발 길이에 따라 추가 요금이 있을 수 있어요. 기준은 매장 기준표를 따르며, 시술 전 상담 때 확정 금액을 먼저 말씀드려요."},
+ {c:"가격·결제",q:"결제 수단은 무엇이 되나요?",a:"{카드, 현금, 계좌이체, 네이버페이} 결제가 가능해요. 현금영수증 발행도 가능합니다."},
+ {c:"가격·결제",q:"할인이나 이벤트가 있나요?",a:"진행 중인 이벤트는 카카오톡 채널 소식과 네이버 플레이스 쿠폰에서 확인하실 수 있어요. 이벤트는 기간·조건이 있어 예약 시 함께 확인해 드려요."},
+ {c:"시술·준비",q:"시술 시간은 얼마나 걸리나요?",a:"시술 종류와 모발 상태에 따라 달라요. 예약 화면의 시술별 소요 시간을 참고해 주시고, 정확한 시간은 상담 후 안내드려요."},
+ {c:"시술·준비",q:"원하는 스타일 사진을 가져가도 되나요?",a:"네, 참고 사진을 보여 주시면 상담에 큰 도움이 돼요. 모발 상태에 따라 사진과 똑같이 나오지 않을 수 있어서, 가능한 범위를 상담 때 솔직하게 말씀드릴게요."},
+ {c:"시술·준비",q:"염색 전에 머리를 감고 가야 하나요?",a:"방문 당일 따로 준비하실 건 없어요. 평소처럼 오시면 되고, 궁금한 점은 상담 때 디자이너에게 말씀해 주세요."},
+ {c:"시술·준비",q:"어린이 커트도 되나요?",a:"{가능합니다 / 현재 진행하지 않습니다}. 어린이 시술은 보호자 동반을 부탁드려요."},
+ {c:"기타",q:"직원과 직접 통화하고 싶어요.",a:"매장 번호 {0X-XXXX-XXXX}로 영업시간 중에 연락 주세요. 또는 이 채팅방에 \"상담원\"이라고 입력하시면 직원이 확인 후 답변드려요."},
+ {c:"사람 연결",h:1,q:"염색 후 두피가 따갑고 부어요. 괜찮나요?",a:HANDOFF_MED},
+ {c:"사람 연결",h:1,q:"결제가 두 번 됐어요. 환불해 주세요.",a:HANDOFF},
+ {c:"사람 연결",h:1,q:"예약금 돌려받을 수 있나요?",a:HANDOFF},
+ {c:"사람 연결",h:1,q:"펌이 다 풀렸어요. 다시 해 주세요.",a:HANDOFF},
+ {c:"사람 연결",h:1,q:"제 연락처를 지워 주세요.",a:HANDOFF},
+ {c:"사람 연결",h:1,q:"매장에서 다쳤어요.",a:HANDOFF},
+ {c:"사람 연결",h:1,q:"(FAQ에 없는 질문)",a:HANDOFF_UNKNOWN}
+];
+
+var CATS = ["전체"];
+FAQ.forEach(function(f){ if (CATS.indexOf(f.c) < 0) CATS.push(f.c); });
+var state = {cat:"전체", term:""};
+var $ = function(id){ return document.getElementById(id); };
+
+function renderCats(){
+  var box = $("cats"); box.textContent = "";
+  CATS.forEach(function(c){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "cat"; b.textContent = c;
+    b.setAttribute("aria-pressed", String(c === state.cat));
+    b.onclick = function(){ state.cat = c; renderCats(); renderList(); };
+    box.appendChild(b);
+  });
+}
+
+function matches(f){
+  if (state.cat !== "전체" && f.c !== state.cat) return false;
+  var t = state.term.trim().toLowerCase();
+  if (!t) return true;
+  return (f.q + " " + f.a + " " + f.c).toLowerCase().indexOf(t) >= 0;
+}
+
+function renderList(){
+  var ul = $("list"); ul.textContent = "";
+  var items = FAQ.filter(matches);
+  if (!items.length){
+    var li = document.createElement("li"); li.className = "empty";
+    li.textContent = "일치하는 질문이 없어요. 실제 운영에서는 이 경우 직원 연결로 넘어갑니다.";
+    ul.appendChild(li); return;
+  }
+  items.forEach(function(f){
+    var li = document.createElement("li");
+    var b = document.createElement("button"); b.type = "button";
+    var tag = document.createElement("span"); tag.className = "tag" + (f.h ? " h" : "");
+    tag.textContent = f.h ? "사람 연결" : f.c;
+    b.appendChild(tag); b.appendChild(document.createTextNode(f.q));
+    b.onclick = function(){
+      ask(f);
+      if (window.matchMedia("(max-width:760px)").matches) $("log").scrollIntoView({block:"start"});
+    };
+    li.appendChild(b); ul.appendChild(li);
+  });
+}
+
+function bubble(text, cls, who){
+  var d = document.createElement("div"); d.className = "msg " + cls;
+  if (who){ var w = document.createElement("div"); w.className = "who"; w.textContent = who; d.appendChild(w); }
+  d.appendChild(document.createTextNode(text));
+  var log = $("log"); log.appendChild(d); log.scrollTop = log.scrollHeight;
+}
+
+function ask(f){
+  bubble(f.q, "user");
+  if (f.h) bubble(f.a, "bot handoff", "직원 연결 안내");
+  else bubble(f.a, "bot", "모아 헤어 · AI 자동 응답");
+}
+
+function reset(){ $("log").textContent = ""; bubble(GREETING, "bot", "모아 헤어 · 안내"); }
+
+$("q").addEventListener("input", function(e){ state.term = e.target.value; renderList(); });
+$("reset").onclick = reset;
+$("theme").onclick = function(){
+  var r = document.documentElement;
+  var dark = r.getAttribute("data-theme") ? r.getAttribute("data-theme") === "dark"
+           : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  r.setAttribute("data-theme", dark ? "light" : "dark");
+};
+
+renderCats(); renderList(); reset();
+var p = new URLSearchParams(location.search).get("demo");
+if (p !== null){ ask(FAQ[3]); ask(FAQ[11]); ask(FAQ[20]); }
+</script>
+</body>
+</html>
